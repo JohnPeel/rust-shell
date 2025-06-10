@@ -60,13 +60,41 @@
           ${shellHook}
         '';
       };
-    devShells = lib.genAttrs (import systems) (system: let
-      pkgs = import nixpkgs {
-        inherit system;
-        overlays = [
-          fenix.overlays.default
-        ];
-      };
+    eachSystem = f:
+      lib.genAttrs (import systems) (system:
+        f (import nixpkgs {
+          inherit system;
+          overlays = [
+            fenix.overlays.default
+          ];
+        }));
+    formatter = eachSystem (pkgs: let
+      inherit (pkgs) treefmt alejandra taplo;
+      inherit (pkgs.fenix.complete) rustfmt;
+    in
+      treefmt.withConfig {
+        settings = {
+          on-unmatched = "info";
+
+          formatter = {
+            alejandra = {
+              command = "${alejandra}/bin/alejandra";
+              includes = ["*.nix"];
+            };
+            rustfmt = {
+              command = "${rustfmt}/bin/rustfmt";
+              options = ["--config-path" "./rustfmt.toml"];
+              includes = ["*.rs"];
+            };
+            taplo = {
+              command = "${taplo}/bin/taplo";
+              options = ["format"];
+              includes = ["*.toml"];
+            };
+          };
+        };
+      });
+    devShells = eachSystem (pkgs: let
       inherit (pkgs) callPackage clang pkg-config libiconv;
       inherit (pkgs.fenix.stable) rustc rust-src cargo clippy;
       inherit (pkgs.fenix.complete) rustfmt;
@@ -87,9 +115,7 @@
       };
     });
   in {
-    inherit devShells;
-    lib = {
-      inherit minimalShell;
-    };
+    inherit devShells formatter;
+    lib = {inherit minimalShell;};
   };
 }
