@@ -69,8 +69,7 @@
           ];
         }));
     formatter = eachSystem (pkgs: let
-      inherit (pkgs) treefmt alejandra taplo;
-      inherit (pkgs.fenix.complete) rustfmt;
+      inherit (pkgs) alejandra treefmt;
     in
       treefmt.withConfig {
         settings = {
@@ -81,16 +80,6 @@
               command = "${alejandra}/bin/alejandra";
               includes = ["*.nix"];
             };
-            rustfmt = {
-              command = "${rustfmt}/bin/rustfmt";
-              options = ["--config-path" "./rustfmt.toml"];
-              includes = ["*.rs"];
-            };
-            taplo = {
-              command = "${taplo}/bin/taplo";
-              options = ["format"];
-              includes = ["*.toml"];
-            };
           };
         };
       });
@@ -99,20 +88,41 @@
       inherit (pkgs.fenix.stable) rustc rust-src cargo clippy;
       inherit (pkgs.fenix.complete) rustfmt;
     in {
-      default = callPackage minimalShell {
-        packages = [
-          pkg-config
-          clang
-          rustc
-          cargo
-          clippy
-          rustfmt
-        ];
-        shellHook = ''
-          export LIBRARY_PATH="${lib.makeLibraryPath [libiconv]}''${LIBRARY_PATH:+:''${LIBRARY_PATH}}";
-          export RUST_SRC_PATH="${rust-src}/lib/rustlib/src/rust/library"
-        '';
-      };
+      default = let
+        inherit (pkgs.fenix.stable) rustc rust-src cargo clippy;
+        inherit (pkgs.fenix.complete) rustfmt;
+      in
+        callPackage minimalShell {
+          packages = [
+            pkg-config
+            clang
+            rustc
+            cargo
+            clippy
+            rustfmt
+          ];
+          shellHook = ''
+            export LIBRARY_PATH="${lib.makeLibraryPath [libiconv]}''${LIBRARY_PATH:+:''${LIBRARY_PATH}}";
+            export RUST_SRC_PATH="${rust-src}/lib/rustlib/src/rust/library"
+          '';
+        };
+      nightly = let
+        inherit (pkgs.fenix.complete) rustc rust-src cargo clippy rustfmt;
+      in
+        callPackage minimalShell {
+          packages = [
+            pkg-config
+            clang
+            rustc
+            cargo
+            clippy
+            rustfmt
+          ];
+          shellHook = ''
+            export LIBRARY_PATH="${lib.makeLibraryPath [libiconv]}''${LIBRARY_PATH:+:''${LIBRARY_PATH}}";
+            export RUST_SRC_PATH="${rust-src}/lib/rustlib/src/rust/library"
+          '';
+        };
     });
   in {
     inherit devShells formatter;
